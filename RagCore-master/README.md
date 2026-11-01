@@ -1,98 +1,95 @@
-RAGCore Image recognition primer
-================================
+# RAGCore
 
-Purpose
--------
-This document explains how image recognition systems work, end to end. It covers the main stages from getting the image to producing a labeled output, and highlights common model types, training, and deployment notes.
+RAGCore is a retrieval-augmented generation (RAG) learning application built with React, TypeScript, Vite, and Supabase. It includes document-based retrieval and learning tools such as quizzes, notes, flashcards, and mind maps. An optional local cross-encoder service can rerank retrieved results.
 
-Main stages
------------
-- Image capture and ingestion
-    - Acquire a digital image from a sensor or a file.
-    - Convert to a numeric array of pixels.
+## Prerequisites
 
-- Preprocessing
-    - Resize or crop to a standard size.
-    - Normalize pixel values to a common range.
-    - Apply augmentation for training: rotate, flip, change brightness.
+- Node.js and npm
+- A Supabase project and its public frontend configuration
+- Python 3 (only if running the optional local reranker)
+- Git (optional, for cloning)
 
-- Feature extraction
-    - Early methods used hand crafted features such as SIFT or HOG.
-    - Modern systems use learned features from deep networks.
+## Installation
 
-- Model types
-    - Convolutional networks focus on local patterns and work well for many vision tasks.
-    - Vision transformers divide the image into patches and learn global interactions.
-    - Hybrid models combine both ideas.
+1. Clone the repository and enter its directory:
 
-- Training
-    - Data labeling produces pairs of image and desired output.
-    - Loss functions measure discrepancy, for example cross entropy for classification.
-    - Optimizers adjust model weights using gradients computed by backprop.
-    - Regularization and augmentation improve generalization.
+   ```bash
+   git clone https://github.com/thirukumaranv2024-dev/RAGCore.git
+   cd RAGCore
+   ```
 
-- Inference
-    - The trained model processes a new image and outputs predictions.
-    - Outputs vary: class labels, bounding boxes, segmentation masks, or key points.
+   Alternatively, extract the project ZIP and open its root directory.
 
-- Postprocessing
-    - For detection, non maximum suppression removes duplicate boxes.
-    - For segmentation, masks are refined and resized to match original image scale.
+2. Install JavaScript dependencies:
 
-Core concepts
--------------
-- Receptive field
-    - The region of input pixels a layer uses. Deeper layers capture larger context.
+   ```bash
+   npm install
+   ```
 
-- Stride and pooling
-    - Reduce spatial resolution while increasing receptive field.
+## Environment variables
 
-- Transfer learning
-    - Fine tune a model pre trained on large datasets to a new task with less data.
+Copy `.env.example` to `.env` in the project root. In Windows PowerShell:
 
-Practical pipelines
--------------------
-- Classification
-    - Single label per image. Common for photo taggers.
+```powershell
+Copy-Item .env.example .env
+```
 
-- Object detection
-    - Locate and classify multiple objects using bounding boxes.
+Edit `.env` with values for your own setup:
 
-- Semantic segmentation
-    - Label every pixel with a class.
+```dotenv
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+VITE_SUPABASE_PROJECT_ID=your-project-id
 
-- Instance segmentation
-    - Separate instances of the same class with distinct masks.
+# Optional settings (uncomment only when needed)
+# VITE_OLLAMA_URL=http://localhost:11434
+# VITE_RERANKER_URL=http://127.0.0.1:8001
+```
 
-Evaluation metrics
-------------------
-- Accuracy for classification
-- Precision, recall, and mean average precision for detection
-- Intersection over union for segmentation
+Get the Supabase values from your Supabase project dashboard. **Never commit `.env`, private API keys, service-role keys, or passwords.** Variables prefixed with `VITE_` are exposed to browser code; do not place secrets in them. The optional API-key placeholders in `.env.example` must not be used for confidential keys in a deployed frontend.
 
-Challenges and tips
--------------------
-- Data bias
-    - Models learn biases present in training data.
+## Run locally
 
-- Small data
-    - Use transfer learning or synthetic augmentation.
+From the project root:
 
-- Real time constraints
-    - Use efficient architectures and model quantization.
+```bash
+npm run dev
+```
 
-- Explainability
-    - Use saliency maps or attention visualization to inspect model focus.
+Open **http://localhost:8080** in your browser (the port configured in `vite.config.ts`).
 
-Deployment notes
-----------------
-- Convert models to lightweight formats for edge devices.
-- Use batching for throughput on servers.
-- Monitor model performance after deployment and retrain when needed.
+## Optional: local reranker
 
-Further reading
----------------
-- Survey papers on deep vision methods
-- Tutorials on convolutional networks and vision transformers
+The local cross-encoder reranker improves ordering of retrieved passages. To start it on Windows PowerShell, open a second terminal at the project root:
 
-This file is meant to be a single concise overview of how image recognition works. It avoids a long task list and focuses on practical concepts and steps.
+```powershell
+cd services/reranker
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+uvicorn app:app --host 127.0.0.1 --port 8001
+```
+
+Check **http://127.0.0.1:8001/health**. The reranker model may download on its first launch. If the service is unavailable, the frontend falls back to its original retrieval ranking. See `services/reranker/README.md` for details.
+
+## Build and preview
+
+```bash
+npm run build
+npm run preview
+```
+
+## Project structure
+
+- `src/` — React UI, learning tools, and RAG logic
+- `src/lib/rag/` — chunking, embeddings, retrieval, and reranking modules
+- `src/integrations/supabase/` — Supabase integration
+- `services/reranker/` — optional Python reranking service
+- `.env.example` — environment-variable template without real credentials
+
+## Troubleshooting
+
+- If `npm` is not recognized, install Node.js and reopen the terminal.
+- If Supabase initialization fails, check that `.env` contains valid project values and restart the Vite server.
+- If the configured port is busy, stop the other process or change `server.port` in `vite.config.ts`.
+- If reranking is unavailable, check that the optional Python service is running on port 8001.
